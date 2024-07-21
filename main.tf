@@ -14,7 +14,7 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "subnet1" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.1.0/24"
-  map_public_ip_on_launch = true
+#  map_public_ip_on_launch = true
   availability_zone = "eu-west-2a" # Change this to your preferred AZ
   tags = {
     Name = "main-subnet-1"
@@ -24,7 +24,7 @@ resource "aws_subnet" "subnet1" {
 resource "aws_subnet" "subnet2" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "10.0.2.0/24"
-  map_public_ip_on_launch = true
+#  map_public_ip_on_launch = true
   availability_zone = "eu-west-2b" # Change this to your preferred AZ
   tags = {
     Name = "main-subnet-2"
@@ -223,7 +223,6 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-
 resource "aws_launch_template" "app_lt" {
   name_prefix   = "app-launch-template-"
   image_id      = data.aws_ami.ubuntu.id
@@ -233,14 +232,16 @@ resource "aws_launch_template" "app_lt" {
 
   user_data = base64encode(<<-EOF
               #!/bin/bash
+
+              sleep 120
               sudo apt update -y
-              sudo apt install -y python3-pip git python3-venv
+              sudo apt install python3-pip -y
+              sudo apt install git -y
+              sudo apt install python3-venv -y
               cd /home/ubuntu
               git clone https://github.com/ooghenekaro/flask-app.git
               cd flask-app
-              python3 -m venv .venv
-              source .venv/bin/activate
-              pip install -r requirements.txt --break-system-packages
+              sudo pip3 install -r requirements.txt --break-system-packages
               echo "[Unit]
               Description=Flask Application
               After=network.target
@@ -248,8 +249,8 @@ resource "aws_launch_template" "app_lt" {
               [Service]
               User=ubuntu
               WorkingDirectory=/home/ubuntu/flask-app
-              ExecStart=/home/ubuntu/flask-app/.venv/bin/python /home/ubuntu/flask-app/rest.py --port=5000
-              Environment='PATH=/usr/bin:/home/ubuntu/flask-app/.venv/bin'
+              ExecStart=/usr/bin/python3 /home/ubuntu/flask-app/rest.py
+              Environment='PATH=/usr/bin'
               Restart=always
 
               [Install]
@@ -258,7 +259,7 @@ resource "aws_launch_template" "app_lt" {
               sudo systemctl enable flask-app
               sudo systemctl start flask-app
               EOF
- 
+
   )
 
   vpc_security_group_ids = [aws_security_group.app_sg.id]
